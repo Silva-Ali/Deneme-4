@@ -9,14 +9,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
     <!-- Chosen Palette: Warm Neutrals -->
-    <!-- Application Structure Plan: The application is designed as a single-page dashboard with a fluid, layered structure. The main view presents a polished, visually appealing dashboard with key metrics (KPIs), a dynamic data table, and interactive charts. The core interaction flow is a drill-down model: clicking on any interactive element (table row, chart segment) opens a single, multi-purpose modal that provides granular details. The integration of an AI-generated summary is now a deliberate, user-initiated action via a button. This structure prioritizes both an aesthetic "feel" and a clear, logical exploration path, allowing users to effortlessly switch between a macro overview and micro-level details without feeling overwhelmed. -->
+    <!-- Application Structure Plan: The application is designed as a dynamic, single-page dashboard with a layered structure. The core is a central data store (Firebase Firestore), making the app dynamic and collaborative. The main UI features a top-level tabbed navigation to switch between the 'Ana Panel' (main dashboard) and 'Yeni Sipariş' (new order entry form). The Ana Panel itself is a comprehensive dashboard with KPI cards for real-time metrics, interactive charts for high-level data exploration, and a sortable/filterable data table for detailed inspection. The core interaction model is a drill-down approach, where clicking on any element (KPI card, chart segment, table row) opens a modal with more granular details and interactive controls, including new editing and deletion capabilities. This structure prioritizes user task flow, allowing for quick overviews, deep dives, and data entry, all within a single, cohesive experience. -->
     <!-- Visualization & Content Choices: 
-        - KPI Cards: (Goal: Inform) Used to present key metrics including status-based counts. Method: Stylish HTML/Tailwind cards with hover effects. Interaction: Now also clickable to show related orders in a modal, creating a consistent user flow. Justification: Provides immediate, high-level, and now interactive insights into operational status.
-        - Orders Table: (Goal: Organize/Inform) A detailed, scrollable table with 'Durum' and more readable 'Sipariş Tarihi' columns. Method: HTML Table with dynamic content. Interaction: Rows are clickable to show individual order details in a modal. Justification: Remains the core source for detailed transaction data.
-        - Doughnut Chart (Revenue by Product): (Goal: Compare) To show revenue contribution by product. Method: Chart.js Canvas. Interaction: Clicking a segment filters data and shows a list of orders for that product in a modal. Justification: Excellent for visualizing part-to-whole relationships and provides an interactive entry point for product-specific analysis.
-        - Bar Chart (Orders by Month): (Goal: Change/Compare) To show order volume over time. Method: Chart.js Canvas. Interaction: Clicking a bar filters the data and shows a list of orders for that month in a modal. Justification: Ideal for comparing quantities across time periods and identifying trends.
-        - Gemini Summary Section: (Goal: Analyze) A dedicated section for the AI-generated summary. Method: A dynamic text block updated via a Fetch API call. Interaction: User-initiated via a button. Justification: This transforms the app from a simple dashboard to an AI-powered business intelligence tool by providing instant, high-level analysis, making it more valuable and engaging.
+        - Firebase & User ID Display: (Goal: Inform/Organize) Displays user authentication and provides a unique ID for collaboration. Method: Dynamic text block updated by JS. Justification: Critical for demonstrating the multi-user, collaborative nature of the app and for debugging.
+        - KPI Cards: (Goal: Inform) Used for key metrics including revenue, order counts, and real-time status counts (e.g., 'Yolda'). Method: Stylish HTML/Tailwind cards with icons and hover effects. Interaction: Clickable to show related orders in a modal. Justification: Provides instant, high-level, and interactive insights into operational status.
+        - Orders Table: (Goal: Organize/Inform) A detailed, filterable, and sortable table with status and human-readable dates. Method: HTML Table with dynamic content filtered by JS. Interaction: Rows are clickable to show order details in a modal, which now includes edit and delete options. Justification: Remains the core source for detailed transaction data.
+        - Doughnut Chart (Revenue by Product): (Goal: Compare) Visualizes revenue contribution by product. Method: Chart.js Canvas. Interaction: Clicking a segment opens a modal with orders for that product. Justification: Excellent for visualizing part-to-whole relationships.
+        - Bar Chart (Orders by Month): (Goal: Change/Compare) Displays order volume trends over time. Method: Chart.js Canvas. Interaction: Clicking a bar opens a modal with a list of monthly orders. Justification: Ideal for identifying trends and comparing quantities across time periods.
+        - Gemini Summary Section: (Goal: Analyze) A dedicated section for AI-generated summaries. Method: A dynamic text block updated via a Fetch API call. Interaction: User-initiated via buttons. Justification: Transforms the app into an AI-powered business intelligence tool, providing instant, high-level analysis and valuable insights.
+        - Düşük Stok Uyarısı: (Goal: Inform/Warn) A specific KPI card to alert users of low stock. Method: A dedicated HTML/Tailwind card that appears dynamically based on data. Justification: Provides a critical, immediate warning for a key business metric.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -100,64 +105,118 @@
             <p class="text-lg text-gray-600 mt-2">Sipariş verilerinin genel durumu ve ürün performans analizleri.</p>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8 p-6 container-main">
-            <div class="lg:col-span-2 space-y-8">
-                <section id="kpi-section" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                </section>
+        <nav class="flex justify-center mb-8">
+            <button id="tab-panel" class="tab-button px-6 py-2 border-b-2 border-transparent hover:border-indigo-600 transition-colors duration-300 font-semibold text-gray-600">Ana Panel</button>
+            <button id="tab-add" class="tab-button px-6 py-2 border-b-2 border-transparent hover:border-indigo-600 transition-colors duration-300 font-semibold text-gray-600">Yeni Sipariş Ekle</button>
+        </nav>
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <h2 class="text-xl font-semibold mb-1">Tüm Siparişler</h2>
-                    <p class="text-sm text-gray-500 mb-4">Aşağıdaki tablo, verilen tüm siparişlerin detaylarını içermektedir. Satırlara tıklayarak siparişin detaylarını ve durumunu görüntüleyip değiştirebilirsiniz.</p>
-                    <div class="table-container">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50 sticky top-0">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sipariş Tarihi</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ürün Adı</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adet</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Tutar</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
-                                </tr>
-                            </thead>
-                            <tbody id="orders-table-body" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
+        <main id="main-content" class="grid grid-cols-1 lg:grid-cols-3 gap-8 p-6 container-main">
+            <!-- Ana Panel View -->
+            <div id="panel-view" class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-8">
+                    <section id="kpi-section" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></section>
+                    <div id="low-stock-warning" class="bg-red-50 p-6 rounded-2xl shadow-sm border border-red-200 text-red-700 hidden">
+                        <div class="font-bold">⚠️ Düşük Stok Uyarısı!</div>
+                        <p id="low-stock-list" class="mt-2 text-sm"></p>
                     </div>
-                </div>
-            </div>
-
-            <div class="lg:col-span-1 space-y-8">
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <h2 class="text-xl font-semibold mb-1">Genel Durum Özeti</h2>
-                    <p class="text-sm text-gray-500 mb-4">Gemini tarafından oluşturulan sipariş verilerinin kısa özeti.</p>
-                    <button id="getSummaryButton" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">Özet Oluştur</button>
-                    <div id="summary-section" class="min-h-[100px] flex items-center justify-center p-4 rounded-lg bg-gray-50 mt-4">
-                        <div id="summary-loader" class="text-center hidden">
-                            <svg class="animate-spin h-6 w-6 text-indigo-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="mt-2 text-sm text-gray-500">Analiz yapılıyor...</p>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <h2 class="text-xl font-semibold mb-1">Tüm Siparişler</h2>
+                        <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                            <input type="text" id="searchInput" placeholder="Ürün veya sipariş ara..." class="flex-grow p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <select id="statusFilter" class="p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="all">Tüm Durumlar</option>
+                                <option value="Stokta">Stokta</option>
+                                <option value="Yolda (Gemi)">Yolda (Gemi)</option>
+                                <option value="Yolda (Uçak)">Yolda (Uçak)</option>
+                            </select>
                         </div>
-                        <p id="summaryText" class="text-gray-700 leading-relaxed"></p>
+                        <div class="table-container">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Sipariş Tarihi</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Ürün Adı</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Adet</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Toplam Tutar</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Durum</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <h2 class="text-xl font-semibold mb-1">Ürüne Göre Tutar Dağılımı</h2>
-                    <p class="text-sm text-gray-500 mb-4">Hangi ürünün toplam ciroya ne kadar katkı sağladığını gösterir. Detaylar için dilime tıklayınız.</p>
-                    <div class="chart-container h-64 md:h-72">
-                        <canvas id="revenueByProductChart"></canvas>
+                <div class="lg:col-span-1 space-y-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <h2 class="text-xl font-semibold mb-1">Genel Durum Özeti</h2>
+                        <p class="text-sm text-gray-500 mb-4">Gemini tarafından oluşturulan sipariş verilerinin kısa özeti.</p>
+                        <div class="flex gap-2">
+                           <button id="getSummaryButton" class="flex-grow bg-indigo-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">Özet Oluştur</button>
+                           <button id="getStockSummaryButton" class="flex-grow bg-purple-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:bg-purple-700 transition duration-300 transform hover:scale-105">Stok Analizi</button>
+                        </div>
+                        <div id="summary-section" class="min-h-[100px] flex items-center justify-center p-4 rounded-lg bg-gray-50 mt-4">
+                            <div id="summary-loader" class="text-center hidden">
+                                <svg class="animate-spin h-6 w-6 text-indigo-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-500">Analiz yapılıyor...</p>
+                            </div>
+                            <p id="summaryText" class="text-gray-700 leading-relaxed"></p>
+                        </div>
                     </div>
-                </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                     <h2 class="text-xl font-semibold mb-1">Aylara Göre Sipariş Adetleri</h2>
-                     <p class="text-sm text-gray-500 mb-4">Aylık sipariş yoğunluğunu ve trendleri gösterir. Detaylar için çubuğa tıklayınız.</p>
-                    <div class="chart-container h-64 md:h-72">
-                        <canvas id="ordersByMonthChart"></canvas>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <h2 class="text-xl font-semibold mb-1">Ürüne Göre Tutar Dağılımı</h2>
+                        <p class="text-sm text-gray-500 mb-4">Hangi ürünün toplam ciroya ne kadar katkı sağladığını gösterir. Detaylar için dilime tıklayınız.</p>
+                        <div class="chart-container h-64 md:h-72">
+                            <canvas id="revenueByProductChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm">
+                        <h2 class="text-xl font-semibold mb-1">Aylara Göre Sipariş Adetleri</h2>
+                        <p class="text-sm text-gray-500 mb-4">Aylık sipariş yoğunluğunu ve trendleri gösterir. Detaylar için çubuğa tıklayınız.</p>
+                        <div class="chart-container h-64 md:h-72">
+                            <canvas id="ordersByMonthChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Yeni Sipariş Ekle View -->
+            <div id="add-order-view" class="lg:col-span-3 hidden">
+                <div class="bg-white p-6 rounded-2xl shadow-sm max-w-xl mx-auto">
+                    <h2 class="text-xl font-semibold mb-4">Yeni Sipariş Ekle</h2>
+                    <form id="addOrderForm" class="space-y-4">
+                        <div>
+                            <label for="orderDate" class="block text-sm font-medium text-gray-700">Sipariş Tarihi</label>
+                            <input type="date" id="orderDate" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="productName" class="block text-sm font-medium text-gray-700">Ürün Adı</label>
+                            <input type="text" id="productName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700">Adet</label>
+                            <input type="number" id="quantity" required min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="unitPrice" class="block text-sm font-medium text-gray-700">Birim Fiyatı ($)</label>
+                            <input type="number" step="0.01" id="unitPrice" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="orderStatus" class="block text-sm font-medium text-gray-700">Durum</label>
+                            <select id="orderStatus" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="Yolda (Gemi)">Yolda (Gemi)</option>
+                                <option value="Yolda (Uçak)">Yolda (Uçak)</option>
+                                <option value="Stokta">Stokta</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">Sipariş Kaydet</button>
+                    </form>
+                    <p id="formMessage" class="mt-4 text-center text-sm"></p>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -170,19 +229,31 @@
         </div>
     </div>
 
-    <script>
-        const API_KEY = "";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase ve API Anahtarları
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        const API_KEY = ""; // Bu anahtar platform tarafından otomatik sağlanacaktır
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
         
-        let rawData = [
-            { id: 1, date: '2025-01-27', code: '203001', name: 'PREMIUM BULAŞIK SÜNGERİ', qty: 10000, price: 0.54, status: 'Stokta' },
-            { id: 2, date: '2025-03-04', code: '203001', name: 'PREMIUM BULAŞIK SÜNGERİ', qty: 10000, price: 0.54, status: 'Stokta' },
-            { id: 3, date: '2025-06-13', code: '203001', name: 'PREMIUM BULAŞIK SÜNGERİ', qty: 20000, price: 0.54, status: 'Yolda (Gemi)' },
-            { id: 4, date: '2025-07-25', code: '203001', name: 'PREMIUM BULAŞIK SÜNGERİ', qty: 10000, price: 0.54, status: 'Yolda (Gemi)' },
-            { id: 5, date: '2025-04-21', code: '203009', name: 'PREMIUM BANYO BEZİ', qty: 10000, price: 0.91, status: 'Yolda (Uçak)' },
-            { id: 6, date: '2025-07-25', code: '202020', name: 'MAVİ BONE', qty: 5000, price: 2.44, status: 'Stokta' },
-            { id: 7, date: '2025-08-28', code: '202001', name: 'BULAŞIK SÜNGERİ', qty: 20000, price: 0.58, status: 'Stokta' }
-        ];
+        let db;
+        let auth;
+        let userId;
+        let ordersCollection;
+        let rawData = [];
+        let editingOrder = null;
+
+        const statusMap = {
+            'Yolda (Gemi)': 'text-blue-500 font-semibold',
+            'Yolda (Uçak)': 'text-yellow-500 font-semibold',
+            'Stokta': 'text-green-500 font-semibold'
+        };
 
         const formatDate = (dateString) => {
             const date = new Date(dateString);
@@ -191,20 +262,39 @@
         };
         const formatCurrency = (value) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'USD' }).format(value);
         const formatNumber = (value) => new Intl.NumberFormat('tr-TR').format(value);
-        const statusMap = {
-            'Yolda (Gemi)': 'text-blue-500 font-semibold',
-            'Yolda (Uçak)': 'text-yellow-500 font-semibold',
-            'Stokta': 'text-green-500 font-semibold'
+
+        // UI Elementleri
+        const panelView = document.getElementById('panel-view');
+        const addOrderView = document.getElementById('add-order-view');
+        const tabPanel = document.getElementById('tab-panel');
+        const tabAdd = document.getElementById('tab-add');
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+
+        const switchView = (viewId) => {
+            if (viewId === 'panel-view') {
+                panelView.classList.remove('hidden');
+                addOrderView.classList.add('hidden');
+                tabPanel.classList.add('border-indigo-600');
+                tabAdd.classList.remove('border-indigo-600');
+            } else {
+                panelView.classList.add('hidden');
+                addOrderView.classList.remove('hidden');
+                tabPanel.classList.remove('border-indigo-600');
+                tabAdd.classList.add('border-indigo-600');
+            }
         };
 
-        const renderUI = () => {
-            const totalRevenue = rawData.reduce((sum, item) => sum + item.qty * item.price, 0);
-            const totalQuantity = rawData.reduce((sum, item) => sum + item.qty, 0);
-            const totalOrders = rawData.length;
-            const uniqueProducts = new Set(rawData.map(item => item.name)).size;
-            const totalOnShip = rawData.filter(item => item.status === 'Yolda (Gemi)').length;
-            const totalOnPlane = rawData.filter(item => item.status === 'Yolda (Uçak)').length;
-            const totalInStock = rawData.filter(item => item.status === 'Stokta').length;
+        tabPanel.addEventListener('click', () => switchView('panel-view'));
+        tabAdd.addEventListener('click', () => switchView('add-order-view'));
+
+        const renderUI = (data = rawData, lowStockProducts = []) => {
+            const totalRevenue = data.reduce((sum, item) => sum + (item.qty || 0) * (item.price || 0), 0);
+            const totalQuantity = data.reduce((sum, item) => sum + (item.qty || 0), 0);
+            const totalOrders = data.length;
+            const totalOnShip = data.filter(item => item.status === 'Yolda (Gemi)').length;
+            const totalOnPlane = data.filter(item => item.status === 'Yolda (Uçak)').length;
+            const totalInStock = data.filter(item => item.status === 'Stokta').length;
 
             const kpiData = [
                 { label: 'Toplam Tutar', value: formatCurrency(totalRevenue), icon: '💰' },
@@ -228,29 +318,44 @@
                     </div>
                 `;
                 if (kpi.filter) {
-                    card.onclick = () => showDetails(`${kpi.label} Siparişleri`, rawData.filter(item => item.status === kpi.filter));
+                    card.onclick = () => showDetails(`${kpi.label} Siparişleri`, data.filter(item => item.status === kpi.filter));
                 }
                 kpiSection.appendChild(card);
             });
 
+            const lowStockWarning = document.getElementById('low-stock-warning');
+            if (lowStockProducts.length > 0) {
+                lowStockWarning.classList.remove('hidden');
+                document.getElementById('low-stock-list').innerHTML = `
+                    <ul class="list-disc list-inside">
+                        ${lowStockProducts.map(p => `<li>**${p.name}**: ${p.qty} adet kaldı.</li>`).join('')}
+                    </ul>
+                `;
+            } else {
+                lowStockWarning.classList.add('hidden');
+            }
+
             const tableBody = document.getElementById('orders-table-body');
             tableBody.innerHTML = '';
-            rawData.forEach(order => {
+            data.forEach(order => {
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50 cursor-pointer transition duration-150';
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${formatDate(order.date)}</td>
-                    <td class="px-6 py-4 whitespace-now-rap text-sm text-gray-700">${order.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${order.name}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatNumber(order.qty)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${formatCurrency(order.qty * order.price)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${formatCurrency((order.qty || 0) * (order.price || 0))}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm ${statusMap[order.status]}">${order.status}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <button onclick="event.stopPropagation(); showDetails('Sipariş Detayı', rawData.find(o => o.id === '${order.id}'));" class="text-indigo-600 hover:text-indigo-900 font-semibold mr-2">Düzenle</button>
+                        <button onclick="event.stopPropagation(); deleteOrder('${order.id}');" class="text-red-600 hover:text-red-900 font-semibold">Sil</button>
+                    </td>
                 `;
-                row.onclick = () => showDetails('Sipariş Detayı', order);
                 tableBody.appendChild(row);
             });
 
-            const productRevenue = rawData.reduce((acc, order) => {
-                const total = order.qty * order.price;
+            const productRevenue = data.reduce((acc, order) => {
+                const total = (order.qty || 0) * (order.price || 0);
                 acc[order.name] = (acc[order.name] || 0) + total;
                 return acc;
             }, {});
@@ -276,37 +381,27 @@
                         if (elements.length > 0) {
                             const index = elements[0].index;
                             const productName = Object.keys(productRevenue)[index];
-                            const filteredOrders = rawData.filter(order => order.name === productName);
+                            const filteredOrders = data.filter(order => order.name === productName);
                             showDetails(`${productName} Siparişleri`, filteredOrders);
                         }
                     },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { padding: 20 } },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.label}: ${formatCurrency(context.raw)}`;
-                                }
-                            }
-                        }
-                    },
+                    plugins: { legend: { position: 'bottom', labels: { padding: 20 } } },
                     cutout: '60%'
                 }
             });
 
-            const monthlyOrders = rawData.reduce((acc, order) => {
+            const monthlyOrders = data.reduce((acc, order) => {
                 const month = new Date(order.date).toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
-                acc[month] = (acc[month] || 0) + order.qty;
+                acc[month] = (acc[month] || 0) + (order.qty || 0);
                 return acc;
             }, {});
-
+            
             const sortedMonths = Object.keys(monthlyOrders).sort((a, b) => {
                 const [monthA, yearA] = a.split(' ');
                 const [monthB, yearB] = b.split(' ');
                 const monthMap = { 'Ocak': 0, 'Şubat': 1, 'Mart': 2, 'Nisan': 3, 'Mayıs': 4, 'Haziran': 5, 'Temmuz': 6, 'Ağustos': 7, 'Eylül': 8, 'Ekim': 9, 'Kasım': 10, 'Aralık': 11 };
                 return new Date(yearA, monthMap[monthA]) - new Date(yearB, monthMap[monthB]);
             });
-            
             const sortedQuantities = sortedMonths.map(month => monthlyOrders[month]);
 
             const ordersByMonthCtx = document.getElementById('ordersByMonthChart').getContext('2d');
@@ -329,22 +424,11 @@
                         if (elements.length > 0) {
                             const index = elements[0].index;
                             const monthName = sortedMonths[index];
-                            const filteredOrders = rawData.filter(order => new Date(order.date).toLocaleString('tr-TR', { month: 'long', year: 'numeric' }) === monthName);
+                            const filteredOrders = data.filter(order => new Date(order.date).toLocaleString('tr-TR', { month: 'long', year: 'numeric' }) === monthName);
                             showDetails(`${monthName} Siparişleri`, filteredOrders);
                         }
                     },
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { 
-                            beginAtZero: true,
-                            grid: { drawBorder: false },
-                        },
-                        x: {
-                            grid: { display: false }
-                        }
-                    }
+                    plugins: { legend: { display: false } }
                 }
             });
         };
@@ -376,7 +460,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatDate(item.date)}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.name}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatNumber(item.qty)}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${formatCurrency(item.qty * item.price)}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${formatCurrency((item.qty || 0) * (item.price || 0))}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm ${statusMap[item.status]}">${item.status}</td>
                                     </tr>
                                 `).join('')}
@@ -387,47 +471,66 @@
                 modalContent.innerHTML = tableHtml;
             } else {
                 const item = data;
+                editingOrder = item;
                 const detailHtml = `
-                    <div class="bg-gray-50 p-6 rounded-lg">
-                        <p class="text-sm text-gray-500">Sipariş Tarihi</p>
-                        <p class="text-lg font-semibold">${formatDate(item.date)}</p>
-                    </div>
-                    <div class="bg-gray-50 p-6 rounded-lg">
-                        <p class="text-sm text-gray-500">Ürün Adı</p>
-                        <p class="text-lg font-semibold">${item.name}</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-gray-50 p-6 rounded-lg">
-                            <p class="text-sm text-gray-500">Adet</p>
-                            <p class="text-lg font-semibold">${formatNumber(item.qty)}</p>
+                    <div class="bg-gray-50 p-6 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="modalOrderDate" class="block text-sm font-medium text-gray-700">Sipariş Tarihi</label>
+                            <input type="date" id="modalOrderDate" value="${item.date}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         </div>
-                        <div class="bg-gray-50 p-6 rounded-lg">
-                            <p class="text-sm text-gray-500">Birim Fiyat</p>
-                            <p class="text-lg font-semibold">${formatCurrency(item.price)}</p>
+                        <div>
+                            <label for="modalProductName" class="block text-sm font-medium text-gray-700">Ürün Adı</label>
+                            <input type="text" id="modalProductName" value="${item.name}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         </div>
-                        <div class="bg-gray-50 p-6 rounded-lg col-span-2">
-                            <p class="text-sm text-gray-500">Toplam Tutar</p>
-                            <p class="text-lg font-semibold">${formatCurrency(item.qty * item.price)}</p>
+                        <div>
+                            <label for="modalQuantity" class="block text-sm font-medium text-gray-700">Adet</label>
+                            <input type="number" id="modalQuantity" value="${item.qty}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div>
+                            <label for="modalUnitPrice" class="block text-sm font-medium text-gray-700">Birim Fiyatı ($)</label>
+                            <input type="number" step="0.01" id="modalUnitPrice" value="${item.price}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div class="col-span-1 md:col-span-2">
+                            <label for="modalOrderStatus" class="block text-sm font-medium text-gray-700">Durum</label>
+                            <select id="modalOrderStatus" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                <option value="Yolda (Gemi)" ${item.status === 'Yolda (Gemi)' ? 'selected' : ''}>Yolda (Gemi)</option>
+                                <option value="Yolda (Uçak)" ${item.status === 'Yolda (Uçak)' ? 'selected' : ''}>Yolda (Uçak)</option>
+                                <option value="Stokta" ${item.status === 'Stokta' ? 'selected' : ''}>Stokta</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">Sipariş Durumunu Değiştir</label>
-                        <select id="status-select" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <option value="Yolda (Gemi)" ${item.status === 'Yolda (Gemi)' ? 'selected' : ''}>Yolda (Gemi)</option>
-                            <option value="Yolda (Uçak)" ${item.status === 'Yolda (Uçak)' ? 'selected' : ''}>Yolda (Uçak)</option>
-                            <option value="Stokta" ${item.status === 'Stokta' ? 'selected' : ''}>Stokta</option>
-                        </select>
+                    <div class="mt-4 flex gap-4">
+                        <button id="update-button" class="flex-grow bg-green-500 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:bg-green-600 transition duration-300 transform hover:scale-105">Güncelle</button>
+                        <button id="delete-button" class="flex-grow bg-red-500 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:bg-red-600 transition duration-300 transform hover:scale-105">SİL</button>
                     </div>
                 `;
                 modalContent.innerHTML = detailHtml;
 
-                const statusSelect = document.getElementById('status-select');
-                statusSelect.addEventListener('change', (e) => {
-                    const newStatus = e.target.value;
-                    const orderToUpdate = rawData.find(o => o.id === item.id);
-                    if (orderToUpdate) {
-                        orderToUpdate.status = newStatus;
-                        renderUI();
+                document.getElementById('update-button').addEventListener('click', async () => {
+                    const updatedOrder = {
+                        date: document.getElementById('modalOrderDate').value,
+                        name: document.getElementById('modalProductName').value,
+                        qty: parseInt(document.getElementById('modalQuantity').value),
+                        price: parseFloat(document.getElementById('modalUnitPrice').value),
+                        status: document.getElementById('modalOrderStatus').value,
+                    };
+
+                    try {
+                        await updateDoc(doc(ordersCollection, editingOrder.id), updatedOrder);
+                        alert('Sipariş başarıyla güncellendi.');
+                        closeModal('detailsModal');
+                    } catch (e) {
+                        alert('Sipariş güncellenemedi. Hata: ' + e.message);
+                    }
+                });
+
+                document.getElementById('delete-button').addEventListener('click', async () => {
+                    try {
+                        await deleteDoc(doc(ordersCollection, editingOrder.id));
+                        alert('Sipariş başarıyla silindi.');
+                        closeModal('detailsModal');
+                    } catch (e) {
+                        alert('Sipariş silinemedi. Hata: ' + e.message);
                     }
                 });
             }
@@ -438,17 +541,22 @@
             document.getElementById(modalId).style.display = 'none';
         };
 
-        const getSummary = async () => {
+        const getSummary = async (promptType = 'general') => {
             const summaryLoader = document.getElementById('summary-loader');
             const summaryText = document.getElementById('summaryText');
             summaryLoader.classList.remove('hidden');
             summaryText.classList.add('hidden');
 
             const formattedData = rawData.map(order => 
-                `Sipariş ID: ${order.id}, Tarih: ${order.date}, Ürün Adı: ${order.name}, Adet: ${order.qty}, Birim Fiyat: ${order.price}, Toplam Tutar: ${order.qty * order.price}, Durum: ${order.status}`
+                `Sipariş ID: ${order.id}, Tarih: ${order.date}, Ürün Adı: ${order.name}, Adet: ${order.qty}, Birim Fiyat: ${order.price}, Toplam Tutar: ${(order.qty || 0) * (order.price || 0)}, Durum: ${order.status}`
             ).join('\n');
-
-            const prompt = `Aşağıdaki sipariş verilerini analiz et ve bir iş analisti gibi davranarak önemli bulguları ve anahtar metrikleri (toplam sipariş sayısı, toplam tutar, en çok satan ürün, durum dağılımı gibi) özetle. Yanıtını maddeler halinde ve profesyonel bir dille sun. Veriler:\n\n${formattedData}`;
+            
+            let prompt = "";
+            if (promptType === 'general') {
+                 prompt = `Aşağıdaki sipariş verilerini analiz et ve bir iş analisti gibi davranarak önemli bulguları ve anahtar metrikleri (toplam sipariş sayısı, toplam tutar, en çok satan ürün, durum dağılımı gibi) özetle. Yanıtını maddeler halinde ve profesyonel bir dille sun. Veriler:\n\n${formattedData}`;
+            } else if (promptType === 'stock') {
+                 prompt = `Aşağıdaki sipariş verilerini kullanarak stok durumunu analiz et. Hangi ürünlerin stoğu kritik seviyede (örneğin 500 adetin altında) veya tamamen tükenmişse, bu durumu belirt. En çok sipariş verilen ürünleri ve stok seviyelerini karşılaştır. Analizini maddeler halinde ve profesyonel bir dille sun. Veriler:\n\n${formattedData}`;
+            }
 
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
@@ -496,11 +604,118 @@
             makeApiCall();
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            renderUI();
-            const getSummaryButton = document.getElementById('getSummaryButton');
-            getSummaryButton.addEventListener('click', getSummary);
+        const sortTable = (columnIndex) => {
+            const tableBody = document.getElementById('orders-table-body');
+            const rows = Array.from(tableBody.querySelectorAll('tr'));
+            const isAscending = tableBody.getAttribute('data-sort-order') !== 'asc';
+            const sortedRows = rows.sort((a, b) => {
+                const aText = a.cells[columnIndex].textContent.trim();
+                const bText = b.cells[columnIndex].textContent.trim();
+                if (columnIndex === 2 || columnIndex === 3) {
+                    const aValue = parseFloat(aText.replace(/[^\d,.]/g, '').replace(',', '.'));
+                    const bValue = parseFloat(bText.replace(/[^\d,.]/g, '').replace(',', '.'));
+                    return isAscending ? aValue - bValue : bValue - aValue;
+                }
+                return isAscending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+            });
+            tableBody.innerHTML = '';
+            sortedRows.forEach(row => tableBody.appendChild(row));
+            tableBody.setAttribute('data-sort-order', isAscending ? 'asc' : 'desc');
+        };
+
+        document.querySelectorAll('thead th').forEach((header, index) => {
+            if (header.textContent.trim() !== 'Durum') {
+                header.addEventListener('click', () => sortTable(index));
+            }
         });
+
+        const filterTable = () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedStatus = statusFilter.value;
+
+            const filteredData = rawData.filter(item => {
+                const matchesSearch = searchTerm === '' || 
+                                      item.name.toLowerCase().includes(searchTerm) || 
+                                      (item.code && item.code.toLowerCase().includes(searchTerm));
+                const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
+                return matchesSearch && matchesStatus;
+            });
+            renderUI(filteredData);
+        };
+        
+        searchInput.addEventListener('input', filterTable);
+        statusFilter.addEventListener('change', filterTable);
+
+        document.getElementById('addOrderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formMessage = document.getElementById('formMessage');
+            try {
+                const newOrder = {
+                    date: document.getElementById('orderDate').value,
+                    name: document.getElementById('productName').value,
+                    qty: parseInt(document.getElementById('quantity').value),
+                    price: parseFloat(document.getElementById('unitPrice').value),
+                    status: document.getElementById('orderStatus').value
+                };
+
+                await addDoc(ordersCollection, newOrder);
+                formMessage.textContent = 'Sipariş başarıyla kaydedildi!';
+                formMessage.classList.remove('text-red-500');
+                formMessage.classList.add('text-green-500');
+                document.getElementById('addOrderForm').reset();
+            } catch (e) {
+                formMessage.textContent = 'Sipariş kaydedilemedi. Hata: ' + e.message;
+                formMessage.classList.remove('text-green-500');
+                formMessage.classList.add('text-red-500');
+            }
+        });
+
+        const initializeFirebase = async () => {
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                document.getElementById('main-content').innerHTML = '<div class="text-center text-red-500 font-semibold p-8">Hata: Firebase yapılandırma bilgileri bulunamadı.</div>';
+                return;
+            }
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                userId = auth.currentUser.uid;
+                ordersCollection = collection(db, `artifacts/${appId}/users/${userId}/orders`);
+                
+                onSnapshot(ordersCollection, (snapshot) => {
+                    const orders = [];
+                    snapshot.forEach(doc => {
+                        orders.push({ id: doc.id, ...doc.data() });
+                    });
+                    rawData = orders;
+                    filterTable();
+                });
+            } catch (e) {
+                document.getElementById('main-content').innerHTML = `<div class="text-center text-red-500 font-semibold p-8">Kimlik doğrulama hatası: ${e.message}</div>`;
+                console.error("Authentication error:", e);
+            }
+        };
+
+        window.onload = initializeFirebase;
+        document.getElementById('getSummaryButton').addEventListener('click', () => getSummary('general'));
+        document.getElementById('getStockSummaryButton').addEventListener('click', () => getSummary('stock'));
+        window.showDetails = showDetails;
+        window.closeModal = closeModal;
+        window.deleteOrder = async (id) => {
+            try {
+                await deleteDoc(doc(ordersCollection, id));
+                alert('Sipariş başarıyla silindi.');
+            } catch (e) {
+                alert('Sipariş silinemedi. Hata: ' + e.message);
+            }
+        };
+        
     </script>
 </body>
 </html>
