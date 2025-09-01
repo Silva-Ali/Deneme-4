@@ -138,7 +138,7 @@
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Ürün Adı</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Adet</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Toplam Tutar</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Durum</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                                     </tr>
                                 </thead>
@@ -231,15 +231,25 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase ve API Anahtarları
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Firebase Yapılandırma Bilgileri
+        // Bu bilgileri Firebase Console'daki projenizden almanız gerekiyor.
+        const firebaseConfig = {
+            apiKey: "AIzaSyASCeVzpEOhDCHyWTeza7Rnbm4U8EUc5QE",
+            authDomain: "stokdepo-52630.firebaseapp.com",
+            databaseURL: "https://stokdepo-52630-default-rtdb.firebaseio.com",
+            projectId: "stokdepo-52630",
+            storageBucket: "stokdepo-52630.firebasestorage.app",
+            messagingSenderId: "698156957113",
+            appId: "1:698156957113:web:a7c769b258aa88c79e0a68",
+            measurementId: "G-P20CWT8XB8"
+        };
+        const appId = 'deneme-4';
+        const initialAuthToken = null;
         
-        const API_KEY = ""; // Bu anahtar platform tarafından otomatik sağlanacaktır
+        const API_KEY = "";
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
         
         let db;
@@ -263,7 +273,6 @@
         const formatCurrency = (value) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'USD' }).format(value);
         const formatNumber = (value) => new Intl.NumberFormat('tr-TR').format(value);
 
-        // UI Elementleri
         const panelView = document.getElementById('panel-view');
         const addOrderView = document.getElementById('add-order-view');
         const tabPanel = document.getElementById('tab-panel');
@@ -516,7 +525,8 @@
                     };
 
                     try {
-                        await updateDoc(doc(ordersCollection, editingOrder.id), updatedOrder);
+                        const docRef = doc(db, ordersCollection.path, editingOrder.id);
+                        await updateDoc(docRef, updatedOrder);
                         alert('Sipariş başarıyla güncellendi.');
                         closeModal('detailsModal');
                     } catch (e) {
@@ -525,12 +535,15 @@
                 });
 
                 document.getElementById('delete-button').addEventListener('click', async () => {
-                    try {
-                        await deleteDoc(doc(ordersCollection, editingOrder.id));
-                        alert('Sipariş başarıyla silindi.');
-                        closeModal('detailsModal');
-                    } catch (e) {
-                        alert('Sipariş silinemedi. Hata: ' + e.message);
+                    if (confirm("Bu siparişi silmek istediğinize emin misiniz?")) {
+                        try {
+                            const docRef = doc(db, ordersCollection.path, editingOrder.id);
+                            await deleteDoc(docRef);
+                            alert('Sipariş başarıyla silindi.');
+                            closeModal('detailsModal');
+                        } catch (e) {
+                            alert('Sipariş silinemedi. Hata: ' + e.message);
+                        }
                     }
                 });
             }
@@ -624,7 +637,7 @@
         };
 
         document.querySelectorAll('thead th').forEach((header, index) => {
-            if (header.textContent.trim() !== 'Durum') {
+            if (header.textContent.trim() !== 'İşlemler') {
                 header.addEventListener('click', () => sortTable(index));
             }
         });
@@ -635,8 +648,7 @@
 
             const filteredData = rawData.filter(item => {
                 const matchesSearch = searchTerm === '' || 
-                                      item.name.toLowerCase().includes(searchTerm) || 
-                                      (item.code && item.code.toLowerCase().includes(searchTerm));
+                                      item.name.toLowerCase().includes(searchTerm);
                 const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
                 return matchesSearch && matchesStatus;
             });
@@ -657,7 +669,7 @@
                     price: parseFloat(document.getElementById('unitPrice').value),
                     status: document.getElementById('orderStatus').value
                 };
-
+                
                 await addDoc(ordersCollection, newOrder);
                 formMessage.textContent = 'Sipariş başarıyla kaydedildi!';
                 formMessage.classList.remove('text-red-500');
@@ -671,34 +683,31 @@
         });
 
         const initializeFirebase = async () => {
-            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-                document.getElementById('main-content').innerHTML = '<div class="text-center text-red-500 font-semibold p-8">Hata: Firebase yapılandırma bilgileri bulunamadı.</div>';
-                return;
-            }
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            
             try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
+                
                 userId = auth.currentUser.uid;
                 ordersCollection = collection(db, `artifacts/${appId}/users/${userId}/orders`);
-                
+
                 onSnapshot(ordersCollection, (snapshot) => {
                     const orders = [];
                     snapshot.forEach(doc => {
                         orders.push({ id: doc.id, ...doc.data() });
                     });
                     rawData = orders;
-                    filterTable();
+                    renderUI();
                 });
             } catch (e) {
-                document.getElementById('main-content').innerHTML = `<div class="text-center text-red-500 font-semibold p-8">Kimlik doğrulama hatası: ${e.message}</div>`;
-                console.error("Authentication error:", e);
+                document.body.innerHTML = `<div style="padding: 2rem; color: #ef4444; text-align: center; font-size: 1.5rem;">Hata: Firebase yapılandırma bilgileri bulunamadı. Lütfen <a href="https://firebase.google.com/docs/web/setup" target="_blank" style="text-decoration: underline;">Firebase Console</a>'dan bilgilerinizi alıp kodu güncelleyin.</div>`;
+                console.error("Firebase initialization failed: ", e);
             }
         };
 
@@ -708,14 +717,15 @@
         window.showDetails = showDetails;
         window.closeModal = closeModal;
         window.deleteOrder = async (id) => {
-            try {
-                await deleteDoc(doc(ordersCollection, id));
-                alert('Sipariş başarıyla silindi.');
-            } catch (e) {
-                alert('Sipariş silinemedi. Hata: ' + e.message);
+            const confirmation = confirm("Bu siparişi silmek istediğinize emin misiniz?");
+            if (confirmation) {
+                try {
+                    await deleteDoc(doc(ordersCollection, id));
+                } catch (e) {
+                    alert('Sipariş silinemedi. Hata: ' + e.message);
+                }
             }
         };
-        
     </script>
 </body>
 </html>
