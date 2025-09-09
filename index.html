@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Silva | Aktif Stok Takip Sistemi v2.4</title>
+    <title>Silva | Aktif Stok Takip Sistemi v2.7</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,6 +17,7 @@
             --warning-color: #f39c12;
             --info-color: #9b59b6;
             --ship-color: #16a085;
+            --sold-color: var(--danger-color); /* Satıldı rengi kırmızı olarak değiştirildi */
             --background-color: #f4f7fc;
             --card-background-color: #ffffff;
             --text-color: #333;
@@ -31,7 +32,7 @@
         header { background: linear-gradient(135deg, var(--primary-dark), #1d2b4e); color: white; padding: 2rem; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         header h1 { font-weight: 700; font-size: 2.5rem; }
         main { display: grid; grid-template-columns: 1fr; gap: 2rem; margin-top: 2rem; }
-        @media (min-width: 992px) { main { grid-template-columns: 380px 1fr; } }
+        @media (min-width: 992px) { main { grid-template-columns: 400px 1fr; } }
         .card, .summary-card { background-color: var(--card-background-color); border-radius: 12px; box-shadow: var(--box-shadow); padding: 1.5rem; transition: all 0.3s ease; }
         .card:hover, .summary-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); }
         .card-title { margin-bottom: 1.5rem; font-weight: 600; font-size: 1.25rem; color: var(--primary-dark); border-bottom: 2px solid var(--border-color); padding-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
@@ -43,7 +44,7 @@
         .summary-card .sub-value { font-size: clamp(1rem, 3vw, 1.4rem); font-weight: 500; color: var(--light-text-color); }
         #total-stock .main-value { color: var(--primary-color); }
         #in-stock .main-value { color: var(--secondary-color); }
-        #in-transit .main-value { color: var(--warning-color); }
+        #sold .main-value { color: var(--sold-color); }
         #on-plane .main-value { color: var(--info-color); }
         #on-ship .main-value { color: var(--ship-color); }
         #total-value .main-value { color: #27ae60; }
@@ -53,6 +54,7 @@
         .price-input-group .input-field { flex-grow: 1; }
         .price-input-group .select-field { width: 80px; flex-shrink: 0; }
         .input-field, .select-field { width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; font-family: var(--font-family); transition: all 0.3s ease; }
+        .input-field[type="date"] { color: var(--text-color); }
         .input-field:focus, .select-field:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2); }
         .input-field.invalid { border-color: var(--danger-color); box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2); }
         .btn { padding: 0.9rem 1.5rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
@@ -77,14 +79,14 @@
         .filter-btn.active { background: var(--card-background-color); color: var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
         #product-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem; }
         .product-item { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 1rem 1.25rem; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.5s ease; opacity: 1; transform: scale(1); }
-        .product-item.removing { opacity: 0; transform: scale(0.95) translateX(30px); }
         .product-info .product-name { font-weight: 600; font-size: 1.1rem; }
+        .product-info .product-sku { font-size: 0.8rem; color: #fff; background-color: var(--light-text-color); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-left: 0.5rem; }
         .product-info .product-meta { color: var(--light-text-color); font-size: 0.9rem; }
         .product-meta .price-usd { color: var(--text-color); font-weight: 500; }
         .product-details { display: flex; align-items: center; gap: 1rem; }
         .product-status { padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: 500; font-size: 0.8rem; color: white; text-align: center; min-width: 80px; }
         .status-Stokta { background-color: var(--secondary-color); }
-        .status-Yolda { background-color: var(--warning-color); }
+        .status-Satıldı { background-color: var(--sold-color); }
         .status-Uçakta { background-color: var(--info-color); }
         .status-Gemide { background-color: var(--ship-color); }
         .placeholder-message { text-align: center; padding: 3rem 1rem; border: 2px dashed var(--border-color); border-radius: 12px; }
@@ -108,13 +110,12 @@
     </style>
 </head>
 <body>
-
     <header>
-        <h1>Silva | Aktif Stok Takip Sistemi <sub>v2.4</sub></h1>
+        <h1>Silva | Aktif Stok Takip Sistemi <sub>v2.7</sub></h1>
     </header>
 
     <div class="container">
-        <section id="summary-section">
+         <section id="summary-section">
             <div class="summary-container">
                 <div class="summary-card" id="total-value">
                     <h2>💵 TOPLAM STOK DEĞERİ</h2>
@@ -129,8 +130,8 @@
                     <h2>✅ STOKTA</h2>
                     <p class="main-value">0</p>
                 </div>
-                <div class="summary-card" id="in-transit">
-                    <h2>🚚 YOLDA</h2>
+                <div class="summary-card" id="sold">
+                    <h2>🛒 SATILDI</h2>
                     <p class="main-value">0</p>
                 </div>
                  <div class="summary-card" id="on-ship">
@@ -143,13 +144,20 @@
                 </div>
             </div>
         </section>
-
         <main>
             <aside id="add-product-panel">
                 <div class="card">
                     <h2 class="card-title" id="form-title">Yeni Ürün Ekle</h2>
                     <form id="add-product-form">
                         <input type="hidden" id="edit-product-id">
+                        <div class="form-group">
+                            <label for="product-date">Sipariş Tarihi</label>
+                            <input type="date" id="product-date" class="input-field" required>
+                        </div>
+                         <div class="form-group">
+                            <label for="product-sku">Ürün Kodu</label>
+                            <input type="text" id="product-sku" class="input-field" placeholder="Örn: SLV-MOP-01">
+                        </div>
                         <div class="form-group">
                             <label for="product-name">Ürün Adı</label>
                             <input type="text" id="product-name" class="input-field" placeholder="Örn: El Mopu" required>
@@ -172,7 +180,7 @@
                             <label for="product-status">Durum</label>
                             <select id="product-status" class="select-field">
                                 <option value="Stokta">Stokta</option>
-                                <option value="Yolda">Yolda</option>
+                                <option value="Satıldı">Satıldı</option>
                                 <option value="Gemide">Gemide</option>
                                 <option value="Uçakta">Uçakta</option>
                             </select>
@@ -188,7 +196,7 @@
                 </div>
             </aside>
             <section id="product-list-section" class="card">
-                <div class="card-title">
+                 <div class="card-title">
                     <span>Stok Listesi</span>
                     <button class="btn btn-action" id="export-csv-btn" title="Verileri CSV olarak indir">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -215,7 +223,7 @@
                      <div class="filter-buttons">
                         <button class="filter-btn active" data-filter="Tümü">Tümü</button>
                         <button class="filter-btn" data-filter="Stokta">Stokta</button>
-                        <button class="filter-btn" data-filter="Yolda">Yolda</button>
+                        <button class="filter-btn" data-filter="Satıldı">Satıldı</button>
                         <button class="filter-btn" data-filter="Gemide">Gemide</button>
                         <button class="filter-btn" data-filter="Uçakta">Uçakta</button>
                     </div>
@@ -229,7 +237,6 @@
             </section>
         </main>
     </div>
-
     <div id="toast-container"></div>
     
     <div id="delete-modal" class="modal-overlay">
@@ -246,14 +253,13 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-database-compat.js"></script>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyASCeVzpEOhDCHyWTeza7Rnbm4U8EUc5QE",
-            authDomain: "stokdepo-52630.firebaseapp.com",
-            databaseURL: "https://stokdepo-52630-default-rtdb.firebaseio.com",
-            projectId: "stokdepo-52630",
-            storageBucket: "stokdepo-52630.appspot.com",
+            authDomain: "stokdepo-50000.firebaseapp.com",
+            databaseURL: "https://stokdepo-50000-default-rtdb.firebaseio.com",
+            projectId: "stokdepo-50000",
+            storageBucket: "stokdepo-50000.appspot.com",
             messagingSenderId: "698156957113",
             appId: "1:698156957113:web:632e25ada3a3bfdc9e0a68",
             measurementId: "G-45QFTCYQJF"
@@ -264,7 +270,6 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Element References
-            const addProductPanel = document.getElementById('add-product-panel');
             const addProductForm = document.getElementById('add-product-form');
             const formTitle = document.getElementById('form-title');
             const submitBtn = document.getElementById('submit-btn');
@@ -284,7 +289,9 @@
             const deleteModal = document.getElementById('delete-modal');
             const modalCancelBtn = document.getElementById('modal-cancel-btn');
             const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-
+            const productSkuInput = document.getElementById('product-sku');
+            const productDateInput = document.getElementById('product-date');
+            
             // State Variables
             let allProducts = [];
             let searchTerm = '';
@@ -292,6 +299,10 @@
             let activeSort = 'createdAt_desc';
             let usdToTryRate = 35.0; // Fallback
             let productToDeleteId = null;
+
+
+            // Set default date to today
+            productDateInput.value = new Date().toISOString().split('T')[0];
 
             const showToast = (message, type = 'success') => {
                 const toast = document.createElement('div');
@@ -328,23 +339,26 @@
             };
 
             const updateSummary = () => {
-                const totalStock = allProducts.reduce((sum, p) => sum + p.quantity, 0);
-                const inStock = allProducts.filter(p => p.status === 'Stokta').reduce((sum, p) => sum + p.quantity, 0);
-                const inTransit = allProducts.filter(p => p.status === 'Yolda').reduce((sum, p) => sum + p.quantity, 0);
-                const onShip = allProducts.filter(p => p.status === 'Gemide').reduce((sum, p) => sum + p.quantity, 0);
-                const onPlane = allProducts.filter(p => p.status === 'Uçakta').reduce((sum, p) => sum + p.quantity, 0);
-                const totalValueTL = allProducts.reduce((sum, p) => sum + (p.quantity * p.price), 0);
+                const activeProducts = allProducts.filter(p => p.status !== 'Satıldı');
+                const soldProducts = allProducts.filter(p => p.status === 'Satıldı');
+
+                const totalStock = activeProducts.reduce((sum, p) => sum + p.quantity, 0);
+                const inStock = activeProducts.filter(p => p.status === 'Stokta').reduce((sum, p) => sum + p.quantity, 0);
+                const onShip = activeProducts.filter(p => p.status === 'Gemide').reduce((sum, p) => sum + p.quantity, 0);
+                const onPlane = activeProducts.filter(p => p.status === 'Uçakta').reduce((sum, p) => sum + p.quantity, 0);
+                const totalValueTL = activeProducts.reduce((sum, p) => sum + (p.quantity * p.price), 0);
                 const totalValueUSD = totalValueTL / usdToTryRate;
+                const totalSold = soldProducts.reduce((sum, p) => sum + p.quantity, 0);
 
                 document.querySelector('#total-stock .main-value').textContent = totalStock;
                 document.querySelector('#in-stock .main-value').textContent = inStock;
-                document.querySelector('#in-transit .main-value').textContent = inTransit;
                 document.querySelector('#on-ship .main-value').textContent = onShip;
                 document.querySelector('#on-plane .main-value').textContent = onPlane;
+                document.querySelector('#sold .main-value').textContent = totalSold;
                 document.querySelector('#total-value-tl').textContent = formatCurrency(totalValueTL, 'TRY');
                 document.querySelector('#total-value-usd').textContent = formatCurrency(totalValueUSD, 'USD');
             };
-            
+
             const renderProducts = () => {
                 // 1. Filter
                 let processedProducts = allProducts;
@@ -352,7 +366,10 @@
                     processedProducts = processedProducts.filter(p => p.status === activeFilter);
                 }
                 if (searchTerm) {
-                    processedProducts = processedProducts.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                    processedProducts = processedProducts.filter(p => 
+                        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
+                    );
                 }
 
                 // 2. Sort
@@ -360,15 +377,15 @@
                 processedProducts.sort((a, b) => {
                     let valA = a[key];
                     let valB = b[key];
-                    if (key === 'name') {
-                        valA = valA.toLowerCase();
-                        valB = valB.toLowerCase();
+                    if (key === 'name' || key === 'sku') {
+                        valA = (valA || '').toLowerCase();
+                        valB = (valB || '').toLowerCase();
                     }
                     if (valA < valB) return direction === 'asc' ? -1 : 1;
                     if (valA > valB) return direction === 'asc' ? 1 : -1;
                     return 0;
                 });
-
+                
                 // 3. Render
                 productListDiv.innerHTML = '';
                 if (processedProducts.length === 0) {
@@ -381,8 +398,12 @@
                         const priceUSD = product.price / usdToTryRate;
                         productElement.innerHTML = `
                             <div class="product-info">
-                                <span class="product-name">${product.name}</span>
+                                <div>
+                                    <span class="product-name">${product.name}</span>
+                                    ${product.sku ? `<span class="product-sku">${product.sku}</span>` : ''}
+                                </div>
                                 <div class="product-meta">
+                                    <span>${new Date(product.date).toLocaleDateString('tr-TR')}</span> &bull;
                                     <span>${product.quantity} Adet</span> &bull;
                                     <span class="price-usd">${formatCurrency(product.price, 'TRY')} / ${formatCurrency(priceUSD, 'USD')}</span>
                                 </div>
@@ -403,11 +424,12 @@
                 addProductForm.reset();
                 editProductIdInput.value = '';
                 priceCurrencySelect.value = 'TRY';
+                productDateInput.value = new Date().toISOString().split('T')[0];
                 formTitle.textContent = 'Yeni Ürün Ekle';
                 submitBtn.querySelector('span').textContent = 'Stoğa Ekle';
                 submitBtn.classList.remove('btn-secondary');
                 submitBtn.classList.add('btn-primary');
-                addProductPanel.classList.remove('editing');
+                document.querySelector('#add-product-panel').classList.remove('editing');
                 cancelEditBtn.style.display = 'none';
                 document.querySelectorAll('.input-field.invalid').forEach(el => el.classList.remove('invalid'));
             };
@@ -429,12 +451,17 @@
                     productQuantityInput.classList.add('invalid');
                     isValid = false;
                 }
+                if (!productDateInput.value) {
+                    productDateInput.classList.add('invalid');
+                    isValid = false;
+                }
                 return isValid;
             };
 
+            // FORM SUBMIT (Updated to include SKU and Date)
             addProductForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                if (!validateForm()) {
+                if (!validateForm()){
                     showToast('Lütfen kırmızı alanları düzeltin.', 'info');
                     return;
                 }
@@ -445,6 +472,8 @@
 
                 const productData = {
                     name: productNameInput.value.trim(),
+                    sku: productSkuInput.value.trim(),
+                    date: productDateInput.value,
                     price: priceInTry,
                     quantity: parseInt(productQuantityInput.value),
                     status: productStatusSelect.value
@@ -452,22 +481,21 @@
                 const editId = editProductIdInput.value;
 
                 if (editId) {
-                    productsRef.child(editId).update(productData)
-                        .then(() => {
-                            showToast('Ürün başarıyla güncellendi!', 'success');
-                            resetForm();
-                        });
+                    productsRef.child(editId).update(productData).then(() => {
+                        showToast('Ürün başarıyla güncellendi!', 'success');
+                        resetForm();
+                    });
                 } else {
                     productData.createdAt = firebase.database.ServerValue.TIMESTAMP;
-                    productsRef.push(productData)
-                        .then(() => {
-                            showToast('Ürün başarıyla kaydedildi!', 'success');
-                            resetForm();
-                            productNameInput.focus();
-                        });
+                    productsRef.push(productData).then(() => {
+                         showToast('Ürün başarıyla kaydedildi!', 'success');
+                         resetForm();
+                         productNameInput.focus();
+                    });
                 }
             });
 
+            // EDIT BUTTON CLICK (Updated to populate SKU and Date)
             productListDiv.addEventListener('click', (e) => {
                 const editButton = e.target.closest('.edit-btn');
                 if (editButton) {
@@ -476,22 +504,24 @@
                     if (product) {
                         editProductIdInput.value = product.id;
                         productNameInput.value = product.name;
+                        productSkuInput.value = product.sku || '';
+                        productDateInput.value = product.date;
                         productPriceInput.value = product.price.toFixed(2);
-                        priceCurrencySelect.value = 'TRY'; // Always edit in TRY
+                        priceCurrencySelect.value = 'TRY';
                         productQuantityInput.value = product.quantity;
                         productStatusSelect.value = product.status;
+                        
                         formTitle.textContent = 'Ürünü Düzenle';
                         submitBtn.querySelector('span').textContent = 'Değişiklikleri Kaydet';
                         submitBtn.classList.replace('btn-primary', 'btn-secondary');
-                        addProductPanel.classList.add('editing');
+                        document.querySelector('#add-product-panel').classList.add('editing');
                         cancelEditBtn.style.display = 'block';
                         productNameInput.focus();
                         showToast(`"${product.name}" düzenleniyor...`, 'warning');
                     }
                 }
-
                 const deleteButton = e.target.closest('.delete-btn');
-                if (deleteButton) {
+                if(deleteButton){
                     productToDeleteId = deleteButton.closest('.product-item').dataset.id;
                     deleteModal.classList.add('show');
                 }
@@ -510,7 +540,7 @@
             deleteModal.addEventListener('click', (e) => {
                 if(e.target === deleteModal) deleteModal.classList.remove('show');
             });
-
+            
             cancelEditBtn.addEventListener('click', resetForm);
             searchBox.addEventListener('input', (e) => { searchTerm = e.target.value; renderProducts(); });
             sortBySelect.addEventListener('change', (e) => { activeSort = e.target.value; renderProducts(); });
@@ -523,16 +553,18 @@
                 }
             });
 
-            exportCsvBtn.addEventListener('click', () => {
+
+            // EXPORT CSV (Updated to include SKU and Date)
+             exportCsvBtn.addEventListener('click', () => {
                 if (allProducts.length === 0) {
                     showToast('Dışa aktarılacak ürün yok.', 'info'); return;
                 }
-                const headers = 'Ürün Adı,Birim Fiyat (TL),Birim Fiyat (USD),Adet,Durum,Toplam Değer (TL),Toplam Değer (USD)\n';
+                const headers = 'Tarih,Ürün Kodu,Ürün Adı,Birim Fiyat (TL),Birim Fiyat (USD),Adet,Durum,Toplam Değer (TL),Toplam Değer (USD)\n';
                 const rows = allProducts.map(p => {
                     const totalTL = p.price * p.quantity;
                     const priceUSD = p.price / usdToTryRate;
                     const totalUSD = totalTL / usdToTryRate;
-                    return `"${p.name}",${p.price.toFixed(2)},${priceUSD.toFixed(2)},${p.quantity},${p.status},${totalTL.toFixed(2)},${totalUSD.toFixed(2)}`;
+                    return `${p.date},"${p.sku}","${p.name}",${p.price.toFixed(2)},${priceUSD.toFixed(2)},${p.quantity},${p.status},${totalTL.toFixed(2)},${totalUSD.toFixed(2)}`;
                 }).join('\n');
                 
                 const blob = new Blob([`\uFEFF${headers + rows}`], { type: 'text/csv;charset=utf-8;' });
@@ -543,7 +575,7 @@
                 URL.revokeObjectURL(link.href);
                 showToast('Stok listesi indiriliyor...', 'success');
             });
-            
+
             await fetchAndUpdateRate();
 
             productsRef.on('value', snapshot => {
