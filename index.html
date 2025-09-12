@@ -750,10 +750,11 @@
             searchBox.addEventListener('input', (e) => { searchTerm = e.target.value; renderProducts(); });
             sortBySelect.addEventListener('change', (e) => { activeSort = e.target.value; renderProducts(); });
             filterButtonsContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('filter-btn')) {
-                    filterButtonsContainer.querySelector('.active').classList.remove('active');
-                    e.target.classList.add('active');
-                    activeFilter = e.target.dataset.filter;
+                const btn = e.target.closest('.filter-btn');
+                if (btn) {
+                    filterButtonsContainer.querySelector('.active')?.classList.remove('active');
+                    btn.classList.add('active');
+                    activeFilter = btn.dataset.filter;
                     renderProducts();
                 }
             });
