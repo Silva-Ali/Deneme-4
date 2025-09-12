@@ -1,0 +1,12 @@
+{
+  "products": {
+    "sample1": {
+      "name": "Örnek Ürün",
+      "sku": "ORNEK-001",
+      "price": 100,
+      "quantity": 50,
+      "status": "Stokta",
+      "date": "2024-05-26"
+    }
+  }
+}
