@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -349,6 +350,7 @@
         const db = firebase.database();
         const productsRef = db.ref('products');
         const logsRef = db.ref('logs');
+        const sanitizeInput = (str) => DOMPurify.sanitize(str);
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Element References
@@ -408,7 +410,8 @@
                 const toast = document.createElement('div');
                 toast.className = `toast toast-${type}`;
                 const icons = { success: '✅', info: '🗑️', warning: '✏️', rate: 'ℹ️' };
-                toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
+                toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span></span>`;
+                toast.querySelector('span:last-child').textContent = message;
                 toastContainer.appendChild(toast);
                 setTimeout(() => toast.classList.add('show'), 10);
                 setTimeout(() => {
@@ -565,9 +568,8 @@
                         productElement.innerHTML = `
                             ${isLowStock ? '<div class="low-stock-icon">⚠️</div>' : '<div></div>'}
                             <div class="product-info">
-                                <div>
-                                    <span class="product-name">${product.name}</span>
-                                    ${product.sku ? `<span class="product-sku">${product.sku}</span>` : ''}
+                                <div class="name-wrapper">
+                                    <span class="product-name"></span>
                                 </div>
                                 <div class="product-meta">
                                     <span>${displayDate}</span> &bull;
@@ -582,6 +584,14 @@
                                     <button class="btn btn-danger-outline delete-btn" title="Sil">🗑️</button>
                                 </div>
                             </div>`;
+                        const nameWrapper = productElement.querySelector('.name-wrapper');
+                        nameWrapper.querySelector('.product-name').textContent = product.name;
+                        if (product.sku) {
+                            const skuSpan = document.createElement('span');
+                            skuSpan.className = 'product-sku';
+                            skuSpan.textContent = product.sku;
+                            nameWrapper.appendChild(skuSpan);
+                        }
                         productListDiv.appendChild(productElement);
                     });
                 }
@@ -600,11 +610,13 @@
                         logElement.innerHTML = `
                             <div class="log-icon">${icons[log.action] || 'ℹ️'}</div>
                             <div class="log-details">
-                                <p><span class="log-product-name">${log.details.productName || ''}</span> - ${log.action}</p>
-                                <p class="log-change">${log.details.change || ''}</p>
+                                <p><span class="log-product-name"></span> - ${log.action}</p>
+                                <p class="log-change"></p>
                                 <p class="log-timestamp">${logDate}</p>
                             </div>
                         `;
+                        logElement.querySelector('.log-product-name').textContent = log.details.productName || '';
+                        logElement.querySelector('.log-change').textContent = log.details.change || '';
                         logListDiv.appendChild(logElement);
                     });
                 }
@@ -627,7 +639,7 @@
             const validateForm = () => {
                 let isValid = true;
                 document.querySelectorAll('.input-field.invalid').forEach(el => el.classList.remove('invalid'));
-                if (!productNameInput.value.trim()) {
+                if (!sanitizeInput(productNameInput.value.trim())) {
                     productNameInput.classList.add('invalid'); isValid = false;
                 }
                 const price = parseFloat(productPriceInput.value);
@@ -654,9 +666,12 @@
                 const priceInTry = currency === 'USD' ? price * usdToTryRate : price;
                 const criticalStock = parseInt(criticalStockLevelInput.value) || 0;
 
+                const sanitizedName = sanitizeInput(productNameInput.value.trim());
+                const sanitizedSku = sanitizeInput(productSkuInput.value.trim());
+
                 const productData = {
-                    name: productNameInput.value.trim(),
-                    sku: productSkuInput.value.trim(),
+                    name: sanitizedName,
+                    sku: sanitizedSku,
                     date: productDateInput.value,
                     price: priceInTry,
                     quantity: parseInt(productQuantityInput.value),
